@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>PulseAI v2 – Feedback Intelligence Dashboard</title>
+  <meta name="description" content="Advanced AI-powered feedback analytics with sentiment analysis, theme clustering, churn prediction, RICE scoring, chatbot, and voice interface."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SIDEBAR SHELL ═══════════════════════════ -->
+<div id="appShell" class="app-shell hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <span class="sb-logo-icon">⚡</span>
+      <span class="sb-logo-text">Pulse<span class="g-text">AI</span></span>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-group-label">Analytics</div>
+      <button class="sb-btn active" id="sbn-dashboard"      onclick="showShell('dashboard')"><span class="sb-ico">📊</span><span class="sb-lbl">Dashboard</span></button>
+      <button class="sb-btn"        id="sbn-insights"       onclick="showShell('insights')"><span class="sb-ico">🔍</span><span class="sb-lbl">Insights</span></button>
+      <button class="sb-btn"        id="sbn-sentiment"      onclick="showShell('sentiment')"><span class="sb-ico">😊</span><span class="sb-lbl">Sentiment</span></button>
+      <button class="sb-btn"        id="sbn-themes"         onclick="showShell('themes')"><span class="sb-ico">🧩</span><span class="sb-lbl">Themes</span></button>
+      <button class="sb-btn"        id="sbn-urgency"        onclick="showShell('urgency')"><span class="sb-ico">🚨</span><span class="sb-lbl">Urgency</span></button>
+      <button class="sb-btn"        id="sbn-prioritization" onclick="showShell('prioritization')"><span class="sb-ico">🎯</span><span class="sb-lbl">Prioritization</span></button>
+      <div class="sb-group-label" style="margin-top:16px">Tools</div>
+      <button class="sb-btn"        id="sbn-chatbot"        onclick="showShell('chatbot')"><span class="sb-ico">🤖</span><span class="sb-lbl">AI Chatbot</span></button>
+      <button class="sb-btn"        id="sbn-report"         onclick="showShell('report')"><span class="sb-ico">📄</span><span class="sb-lbl">Report</span></button>
+    </nav>
+    <div class="sb-footer">
+      <button class="sb-btn" onclick="exitDashboard()"><span class="sb-ico">↩</span><span class="sb-lbl">New Analysis</span></button>
+      <button class="sb-btn" onclick="showPage('settings')"><span class="sb-ico">⚙️</span><span class="sb-lbl">Settings</span></button>
+    </div>
+  </aside>
+
+  <div class="shell-main">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="tb-left">
+        <button class="tb-toggle" onclick="toggleSidebar()">☰</button>
+        <div class="tb-crumb"><span class="tb-app">PulseAI</span><span class="tb-sep">›</span><span id="tbLabel">Dashboard</span></div>
+      </div>
+      <div class="tb-right">
+        <div class="analysis-pill"><span class="ap-dot"></span><span id="apText">— reviews</span></div>
+        <div class="alert-bell" id="alertBell" onclick="showShell('dashboard')" title="Smart Alerts" style="display:none">
+          🔔 <span class="alert-count" id="alertCount">0</span>
+        </div>
+        <button class="tb-btn ghost" onclick="exportCSV()">⬇ CSV</button>
+        <button class="tb-btn ghost" onclick="exportJSON()">⬇ JSON</button>
+        <button class="tb-btn primary" onclick="downloadPDF()">⬇ PDF Report</button>
+        <button class="tb-icon-btn" id="shellThemeBtn" onclick="toggleTheme()">🌙</button>
+      </div>
+    </header>
+
+    <!-- Shell panels -->
+    <div class="shell-body">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="shell-panel active" id="panel-dashboard">
+        <div class="panel-header">
+          <h1 class="panel-title">Dashboard <span class="panel-badge">Overview</span></h1>
+          <p class="panel-sub">High-level summary of all analyzed feedback intelligence.</p>
+        </div>
+
+        <!-- Smart Alerts -->
+        <div id="smartAlerts" class="alerts-strip" style="display:none"></div>
+
+        <!-- KPI Row -->
+        <div class="kpi-row" id="kpiRow">
+          <div class="kpi-card"><div class="kpi-icon">📝</div><div class="kpi-num" id="kpiTotal">—</div><div class="kpi-lbl">Total Reviews</div></div>
+          <div class="kpi-card"><div class="kpi-icon">🎭</div><div class="kpi-num" id="kpiSentiment">—</div><div class="kpi-lbl">Avg Sentiment</div></div>
+          <div class="kpi-card"><div class="kpi-icon">🚨</div><div class="kpi-num" id="kpiCritical">—</div><div class="kpi-lbl">Critical Issues</div></div>
+          <div class="kpi-card"><div class="kpi-icon">🔄</div><div class="kpi-num" id="kpiDupes">—</div><div class="kpi-lbl">Duplicates Found</div></div>
+          <div class="kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-num" id="kpiChurn">—</div><div class="kpi-lbl">Churn Risk</div></div>
+          <div class="kpi-card"><div class="kpi-icon">☣️</div><div class="kpi-num" id="kpiToxic">—</div><div class="kpi-lbl">Toxic Flagged</div></div>
+        </div>
+
+        <!-- Charts row -->
+        <div class="charts-row">
+          <div class="dash-card chart-card">
+            <div class="card-hdr"><h3>Sentiment Distribution</h3><span class="badge">AI Scored</span></div>
+            <div class="donut-wrap"><canvas id="sentimentDonut"></canvas><div class="donut-center"><div id="dnutNum">—</div><div class="dnut-lbl">Positive</div></div></div>
+            <div class="sent-legend" id="sentLegend">
+              <div class="leg-row"><span class="ldot pos"></span><div><div class="leg-name">Positive</div><div class="leg-val" id="lPos">—</div></div></div>
+              <div class="leg-row"><span class="ldot neu"></span><div><div class="leg-name">Neutral</div><div class="leg-val" id="lNeu">—</div></div></div>
+              <div class="leg-row"><span class="ldot neg"></span><div><div class="leg-name">Negative</div><div class="leg-val" id="lNeg">—</div></div></div>
+            </div>
+          </div>
+          <div class="dash-card chart-card">
+            <div class="card-hdr"><h3>Feedback by Category</h3><span class="badge live">Live</span></div>
+            <canvas id="categoryBar" style="max-height:220px"></canvas>
+          </div>
+          <div class="dash-card chart-card">
+            <div class="card-hdr"><h3>Urgency Heatmap</h3><span class="badge">Color-coded</span></div>
+            <div class="urgency-heatmap" id="urgencyHeatmap"></div>
+          </div>
+        </div>
+
+        <!-- Trends + Word Cloud -->
+        <div class="charts-row2">
+          <div class="dash-card">
+            <div class="card-hdr"><h3>Sentiment Trend</h3><span class="badge">Timeline</span></div>
+            <canvas id="trendLine" style="max-height:180px"></canvas>
+          </div>
+          <div class="dash-card">
+            <div class="card-hdr"><h3>Top Keywords</h3><span class="badge">Word Cloud</span></div>
+            <canvas id="wordCloudCanvas" width="400" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ INSIGHTS ══ -->
+      <div class="shell-panel" id="panel-insights">
+        <div class="panel-header">
+          <h1 class="panel-title">Insights <span class="panel-badge">Deep Analytics</span></h1>
+          <p class="panel-sub">Duplicate detection, toxicity, churn risk, and persona analysis.</p>
+        </div>
+        <div class="insights-grid">
+          <!-- Duplicate Detection -->
+          <div class="dash-card">
+            <div class="card-hdr"><h3>🔄 Duplicate Detection</h3><span class="badge" id="dupePct">0% duplicates</span></div>
+            <div id="dupeList" class="insight-list"></div>
+          </div>
+          <!-- Toxic Feedback -->
+          <div class="dash-card">
+            <div class="card-hdr"><h3>☣️ Toxic Feedback</h3><span class="badge danger" id="toxicCount">0 flagged</span></div>
+            <div id="toxicList" class="insight-list"></div>
+          </div>
+          <!-- Churn Risk -->
+          <div class="dash-card">
+            <div class="card-hdr"><h3>⚠️ Churn Risk Prediction</h3><span class="badge warn" id="churnCount">0 at risk</span></div>
+            <div id="churnList" class="insight-list"></div>
+          </div>
+          <!-- Persona Detection -->
+          <div class="dash-card">
+            <div class="card-hdr"><h3>👤 Persona Detection</h3><span class="badge">Behavioral mapping</span></div>
+            <div id="personaList" class="persona-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SENTIMENT ══ -->
+      <div class="shell-panel" id="panel-sentiment">
+        <div class="panel-header">
+          <h1 class="panel-title">Sentiment Analysis <span class="panel-badge">Scored 0–1</span></h1>
+          <p class="panel-sub">Per-review sentiment with emoji indicators and confidence scores.</p>
+        </div>
+        <div class="sent-controls">
+          <button class="filter-btn active" onclick="filterSentiment('all',this)">All</button>
+          <button class="filter-btn" onclick="filterSentiment('positive',this)">😊 Positive</button>
+          <button class="filter-btn" onclick="filterSentiment('neutral',this)">😐 Neutral</button>
+          <button class="filter-btn" onclick="filterSentiment('negative',this)">😞 Negative</button>
+        </div>
+        <div id="sentimentCards" class="sent-cards-grid"></div>
+      </div>
+
+      <!-- ══ THEMES ══ -->
+      <div class="shell-panel" id="panel-themes">
+        <div class="panel-header">
+          <h1 class="panel-title">Theme Extraction <span class="panel-badge">Clustered</span></h1>
+          <p class="panel-sub">AI-clustered feedback themes ranked by priority score.</p>
+        </div>
+        <div class="themes-grid" id="themesGrid"></div>
+      </div>
+
+      <!-- ══ URGENCY ══ -->
+      <div class="shell-panel" id="panel-urgency">
+        <div class="panel-header">
+          <h1 class="panel-title">Urgency Classification <span class="panel-badge">Color-coded</span></h1>
+          <p class="panel-sub">Every feedback item classified by urgency level.</p>
+        </div>
+        <div class="urgency-bands">
+          <div class="urg-band critical"><div class="ub-hdr">🚨 Critical</div><div class="ub-list" id="urg-critical"></div></div>
+          <div class="urg-band high"><div class="ub-hdr">⚠️ High</div><div class="ub-list" id="urg-high"></div></div>
+          <div class="urg-band medium"><div class="ub-hdr">📌 Medium</div><div class="ub-list" id="urg-medium"></div></div>
+          <div class="urg-band low"><div class="ub-hdr">✅ Low</div><div class="ub-list" id="urg-low"></div></div>
+        </div>
+      </div>
+
+      <!-- ══ PRIORITIZATION (RICE) ══ -->
+      <div class="shell-panel" id="panel-prioritization">
+        <div class="panel-header">
+          <h1 class="panel-title">RICE Prioritization <span class="panel-badge">Framework</span></h1>
+          <p class="panel-sub">Feature requests scored by Reach × Impact × Confidence ÷ Effort.</p>
+        </div>
+        <div class="dash-card">
+          <table class="rice-table">
+            <thead><tr><th>#</th><th>Feature Request</th><th>Reach</th><th>Impact</th><th>Confidence</th><th>Effort</th><th>RICE Score</th><th>Priority</th></tr></thead>
+            <tbody id="riceTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ CHATBOT ══ -->
+      <div class="shell-panel" id="panel-chatbot">
+        <div class="panel-header">
+          <h1 class="panel-title">PulseAI Assistant <span class="panel-badge">AI Chatbot</span></h1>
+          <p class="panel-sub">Ask anything about your feedback data. Supports voice input and TTS output.</p>
+        </div>
+        <div class="chatbot-layout">
+          <div class="chat-window" id="chatWindow">
+            <div class="chat-msg bot">
+              <div class="msg-avatar">⚡</div>
+              <div class="msg-bubble">
+                <p>Hi! I'm <strong>PulseAI Assistant</strong>. I've analyzed your feedback data and I'm ready to answer any question.</p>
+                <p>Try asking: <em>"What are the top complaints?"</em> or <em>"Who is at churn risk?"</em> or <em>"Show me critical issues."</em></p>
+                <div class="quick-chips">
+                  <button onclick="sendChat('What are the top complaints?')">Top complaints</button>
+                  <button onclick="sendChat('What are the critical issues?')">Critical issues</button>
+                  <button onclick="sendChat('Who is at churn risk?')">Churn risk</button>
+                  <button onclick="sendChat('Show sentiment breakdown')">Sentiment</button>
+                  <button onclick="sendChat('What features are most requested?')">Feature requests</button>
+                  <button onclick="sendChat('Is there toxic feedback?')">Toxicity</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice input">🎤</button>
+            <input type="text" id="chatInput" class="chat-input" placeholder="Ask PulseAI anything about your feedback..." onkeydown="if(event.key==='Enter')sendChat()"/>
+            <button class="chat-send-btn" onclick="sendChat()">Send ↗</button>
+          </div>
+          <div class="voice-status" id="voiceStatus"></div>
+        </div>
+        <div class="chat-suggestions">
+          <div class="sugg-label">💡 Example queries:</div>
+          <div class="sugg-list">
+            <span onclick="sendChat('What are the top complaints this week?')">"What are the top complaints this week?"</span>
+            <span onclick="sendChat('How many people asked for new features?')">"How many feature requests?"</span>
+            <span onclick="sendChat('What urgent issues should we fix first?')">"What should we fix first?"</span>
+            <span onclick="sendChat('Has performance feedback improved?')">"Has performance improved?"</span>
+            <span onclick="sendChat('Give me a full summary')">"Full summary"</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ REPORT ══ -->
+      <div class="shell-panel" id="panel-report">
+        <div class="panel-header">
+          <h1 class="panel-title">AI Report Generator <span class="panel-badge">PDF</span></h1>
+          <p class="panel-sub">Auto-generated insights report ready for download or sharing.</p>
+        </div>
+        <div class="report-actions">
+          <button class="tb-btn primary large" onclick="downloadPDF()">⬇ Download Full PDF Report</button>
+          <button class="tb-btn ghost large" onclick="exportJSON()">⬇ Export JSON</button>
+          <button class="tb-btn ghost large" onclick="exportCSV()">⬇ Export CSV</button>
+        </div>
+        <div class="report-preview dash-card" id="reportPreview">
+          <div class="rp-header"><div class="rp-logo">⚡ PulseAI Intelligence Report</div><div id="rp-date">—</div></div>
+          <div class="rp-body" id="rpBody"></div>
+        </div>
+      </div>
+
+    </div><!-- shell-body -->
+  </div><!-- shell-main -->
+</div><!-- appShell -->
+
+<!-- ═══════════════════════════ PUBLIC PAGES ═══════════════════════════ -->
+<div id="publicPages">
+  <nav class="pub-nav">
+    <div class="pn-inner">
+      <a class="pn-logo" href="#" onclick="showPage('home');return false;"><span>⚡</span>Pulse<span class="g-text">AI</span></a>
+      <div class="pn-links">
+        <a class="pn-lnk" id="pnl-home"     onclick="showPage('home')">Home</a>
+        <a class="pn-lnk" id="pnl-upload"   onclick="showPage('upload')">Analyze</a>
+        <a class="pn-lnk" id="pnl-settings" onclick="showPage('settings')">Settings</a>
+      </div>
+      <div class="pn-actions">
+        <button class="tb-icon-btn" id="pubThemeBtn" onclick="toggleTheme()">🌙</button>
+        <button class="tb-btn primary" onclick="showPage('upload')">Start Analysis</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ HOME ═══ -->
+  <div id="page-home" class="pub-page active">
+    <div class="hero-bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="grid-bg"></div></div>
+    <section class="hero">
+      <div class="hero-badge"><span class="hbdot"></span> v2.0 · 9 AI Modules · Voice-Enabled</div>
+      <h1 class="hero-title">The AI That Reads<br/><span class="g-text">Your Customer's Mind</span></h1>
+      <p class="hero-sub">PulseAI turns raw reviews, tickets, and emails into structured intelligence — sentiment scores, churn predictions, RICE-scored feature requests, and a voice-enabled chatbot. All in seconds. All local.</p>
+      <div class="hero-cta">
+        <button class="tb-btn primary large" onclick="showPage('upload')">🚀 Start Analysis</button>
+        <button class="tb-btn ghost large" onclick="runDemoMode()">▶ Live Demo</button>
+      </div>
+      <div class="hero-stats">
+        <div class="hs"><span class="hs-n">9</span><span class="hs-l">AI Modules</span></div><div class="hs-d"></div>
+        <div class="hs"><span class="hs-n">3s</span><span class="hs-l">Analysis Time</span></div><div class="hs-d"></div>
+        <div class="hs"><span class="hs-n">0</span><span class="hs-l">API Keys Needed</span></div><div class="hs-d"></div>
+        <div class="hs"><span class="hs-n">🎤</span><span class="hs-l">Voice Enabled</span></div>
+      </div>
+    </section>
+    <section class="feat-section">
+      <div class="sec-lbl">What PulseAI Does</div>
+      <h2 class="sec-ttl">9 AI modules. One dashboard.</h2>
+      <div class="feat-grid">
+        <div class="feat-card" style="--d:0s"><div class="fi">😊</div><h3>Sentiment Analysis</h3><p>Score 0–1 with emoji output. Positive, neutral, negative with confidence.</p></div>
+        <div class="feat-card" style="--d:.05s"><div class="fi">🧩</div><h3>Theme Extraction</h3><p>Cluster: Bugs, UI/UX, Pricing, Performance, Features, Complaints.</p></div>
+        <div class="feat-card" style="--d:.1s"><div class="fi">🚨</div><h3>Urgency Classification</h3><p>Critical → High → Medium → Low. Color-coded with action guidance.</p></div>
+        <div class="feat-card" style="--d:.15s"><div class="fi">🔄</div><h3>Duplicate Detection</h3><p>Cosine similarity merging. Shows % duplication rate across dataset.</p></div>
+        <div class="feat-card" style="--d:.2s"><div class="fi">🎯</div><h3>RICE Prioritization</h3><p>Auto-score feature requests: Reach × Impact × Confidence ÷ Effort.</p></div>
+        <div class="feat-card" style="--d:.25s"><div class="fi">☣️</div><h3>Toxic Detection</h3><p>Flag abusive language. Label severity. Provide safe rephrasing.</p></div>
+        <div class="feat-card" style="--d:.3s"><div class="fi">⚠️</div><h3>Churn Risk Prediction</h3><p>Multi-signal model using sentiment, urgency, repetition, toxicity.</p></div>
+        <div class="feat-card" style="--d:.35s"><div class="fi">👤</div><h3>Persona Detection</h3><p>Identify: Frustrated User, Power User, New Customer, Champion.</p></div>
+        <div class="feat-card" style="--d:.4s"><div class="fi">🤖</div><h3>AI Chatbot + Voice</h3><p>Ask questions. Speak queries. Hear responses. Real-time data access.</p></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ UPLOAD ═══ -->
+  <div id="page-upload" class="pub-page">
+    <div class="pub-hdr">
+      <div class="sec-lbl">Step 1 of 1</div>
+      <h1 class="pub-ttl">Upload Your Feedback</h1>
+      <p class="pub-sub">Paste text, drag a file (.txt, .csv, .json), or use demo data.</p>
+    </div>
+    <div class="upload-wrap">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="dz-ico">📂</div>
+        <div class="dz-ttl">Drag &amp; Drop or Click to Browse</div>
+        <div class="dz-sub">Supports .txt · .csv · .json</div>
+        <div class="dz-fmts"><span>TXT</span><span>CSV</span><span>JSON</span></div>
+        <input type="file" id="fileInput" accept=".txt,.csv,.json" style="display:none" onchange="handleFile(event)"/>
+      </div>
+
+      <div class="ta-wrap">
+        <div class="ta-toolbar">
+          <label class="ta-lbl">Or paste feedback here:</label>
+          <div class="ta-tools">
+            <button class="mini-btn" onclick="clearInput()">✕ Clear</button>
+            <button class="mini-btn" onclick="countLines()">📊 Count</button>
+          </div>
+        </div>
+        <textarea id="feedbackInput" class="feed-ta"
+          placeholder="Paste customer reviews, survey responses, emails, support tickets...&#10;&#10;One entry per line works best. Or paste a block of text.&#10;&#10;Example:&#10;'The app crashes every time I try to upload a photo.'&#10;'Love the new dashboard! Way cleaner than before.'&#10;'Shipping took 3 weeks. Completely unacceptable.'"
+          rows="14"></textarea>
+        <div class="ta-footer">
+          <span class="char-ctr" id="charCtr">0 characters · 0 lines</span>
+          <span class="ta-hint">💡 Works best with 10+ entries</span>
+        </div>
+      </div>
+
+      <div class="upload-opts">
+        <div class="opt-group">
+          <label class="opt-label">Analysis depth:</label>
+          <select id="maxThemes" class="opt-sel"><option value="3">3 themes</option><option value="5" selected>5 themes</option><option value="8">8 themes</option></select>
+          <select id="maxPriorities" class="opt-sel"><option value="3">3 priorities</option><option value="5" selected>5 priorities</option><option value="8">8 priorities</option></select>
+        </div>
+      </div>
+
+      <div class="upload-actions">
+        <button class="tb-btn primary large full" id="analyzeBtn" onclick="startAnalysis()">🧠 Analyze with AI</button>
+        <button class="tb-btn ghost large" onclick="useDemoData()">🎮 Use Demo Data</button>
+      </div>
+      <div class="upload-tips">
+        <span>🔒 100% local — your data never leaves the browser</span>
+        <span>⚡ Results in under 3 seconds</span>
+        <span>📁 CSV: one review per row, first column used</span>
+      </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <div class="lc-title">PulseAI is Analyzing…</div>
+        <div class="lc-progress"><div class="lc-bar" id="lcBar" style="width:0%"></div></div>
+        <div class="lc-steps">
+          <div class="lstep" id="ls1">🧹 Cleaning &amp; preprocessing</div>
+          <div class="lstep" id="ls2">😊 Sentiment analysis</div>
+          <div class="lstep" id="ls3">🧩 Theme clustering</div>
+          <div class="lstep" id="ls4">🚨 Urgency classification</div>
+          <div class="lstep" id="ls5">🔄 Duplicate detection</div>
+          <div class="lstep" id="ls6">🎯 RICE scoring</div>
+          <div class="lstep" id="ls7">⚠️ Churn prediction</div>
+          <div class="lstep" id="ls8">📝 Generating report</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SETTINGS ═══ -->
+  <div id="page-settings" class="pub-page">
+    <div class="pub-hdr"><div class="sec-lbl">Configuration</div><h1 class="pub-ttl">Settings</h1></div>
+    <div class="settings-wrap">
+      <div class="set-card">
+        <div class="set-ttl">🎨 Appearance</div>
+        <div class="set-row">
+          <div class="set-info"><div class="set-lbl">Dark Mode</div><div class="set-desc">Toggle light/dark theme</div></div>
+          <label class="tog"><input type="checkbox" id="dmCheck" onchange="syncTheme()"/><span class="tog-sl"></span></label>
+        </div>
+        <div class="set-row">
+          <div class="set-info"><div class="set-lbl">Accent Color</div><div class="set-desc">UI accent palette</div></div>
+          <div class="color-row">
+            <button class="c-opt active" onclick="setAccent('neon',this)"   style="background:linear-gradient(135deg,#00E5FF,#9B5DE5)" title="Neon"></button>
+            <button class="c-opt"        onclick="setAccent('indigo',this)" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)" title="Indigo"></button>
+            <button class="c-opt"        onclick="setAccent('emerald',this)"style="background:linear-gradient(135deg,#10b981,#06b6d4)" title="Emerald"></button>
+          </div>
+        </div>
+      </div>
+      <div class="set-card">
+        <div class="set-ttl">🏷️ Application Info</div>
+        <div class="info-grid">
+          <div class="ig-row"><span class="ig-k">Name</span><span class="ig-v">PulseAI</span></div>
+          <div class="ig-row"><span class="ig-k">Version</span><span class="ig-v"><span class="ver-badge">v2.0.0</span></span></div>
+          <div class="ig-row"><span class="ig-k">AI Engine</span><span class="ig-v">PulseAI Agent v2 (Local)</span></div>
+          <div class="ig-row"><span class="ig-k">AI Modules</span><span class="ig-v">9 modules</span></div>
+          <div class="ig-row"><span class="ig-k">Voice</span><span class="ig-v">Web Speech API</span></div>
+          <div class="ig-row"><span class="ig-k">Privacy</span><span class="ig-v">100% Local Processing</span></div>
+        </div>
+      </div>
+      <div class="set-card about-card">
+        <div class="ab-logo">⚡</div>
+        <div class="ab-name">PulseAI v2</div>
+        <div class="ab-tag">Advanced Feedback Intelligence</div>
+        <p class="ab-desc">9 AI modules. Voice chatbot. RICE scoring. Churn prediction. Zero external dependencies.</p>
+        <div class="ab-tags">
+          <span>Sentiment</span><span>Themes</span><span>Urgency</span><span>Duplicates</span>
+          <span>RICE</span><span>Toxicity</span><span>Churn Risk</span><span>Personas</span>
+          <span>AI Chatbot</span><span>Voice I/O</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- publicPages -->
+
+<script src="app-core.js"></script>
+<script src="app-agent.js"></script>
+<script src="app-render.js"></script>
+</body>
+</html>

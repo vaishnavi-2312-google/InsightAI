@@ -4,6 +4,8 @@ let currentPage='home', currentPanel='dashboard';
 let analysisData=null, sidebarCollapsed=false;
 let charts={}, sentimentFilter='all', chatHistory=[];
 let voiceActive=false, voiceRec=null;
+let uploadMode='paste'; // 'paste' | 'multi'
+let entryIdCounter=0;
 
 // ─── DEMO DATA (30 reviews) ───
 const DEMO_REVIEWS=[
@@ -38,6 +40,116 @@ const DEMO_REVIEWS=[
   "Communication from your team during the delay was excellent. Thank you.",
   "Three-star — product is okay but delivery was an absolute nightmare.",
 ].join('\n');
+
+// ─── UPLOAD MODE TABS ───
+function switchUploadMode(mode, btn){
+  uploadMode=mode;
+  document.querySelectorAll('.upload-tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const pasteMode=document.getElementById('dropZone');
+  const taWrap=document.querySelector('.ta-wrap');
+  const multiMode=document.getElementById('multiEntryMode');
+  if(mode==='paste'){
+    if(pasteMode) pasteMode.style.display='';
+    if(taWrap) taWrap.style.display='';
+    if(multiMode) multiMode.style.display='none';
+  } else {
+    if(pasteMode) pasteMode.style.display='none';
+    if(taWrap) taWrap.style.display='none';
+    if(multiMode) multiMode.style.display='';
+    // Pre-populate if empty
+    const list=document.getElementById('entriesList');
+    if(list&&list.children.length===0){
+      addFeedbackEntry();addFeedbackEntry();addFeedbackEntry();
+    }
+  }
+}
+
+// ─── MULTI-ENTRY FUNCTIONS ───
+function addFeedbackEntry(prefillText){
+  const list=document.getElementById('entriesList');
+  if(!list) return;
+  entryIdCounter++;
+  const id='entry-'+entryIdCounter;
+  const n=list.children.length+1;
+  const card=document.createElement('div');
+  card.className='entry-card';
+  card.id=id;
+  card.innerHTML=`
+    <div class="entry-card-header">
+      <span class="entry-number">#${n}</span>
+      <span class="entry-label">Feedback entry ${n}</span>
+      <span class="entry-result-pill" id="${id}-result" style="display:none"></span>
+    </div>
+    <textarea class="entry-ta" id="${id}-ta" rows="3"
+      placeholder="Type or paste a single feedback entry here…"
+      oninput="updateEntryCounts()">${prefillText||''}</textarea>
+    <button class="remove-entry-btn" onclick="removeFeedbackEntry('${id}')" title="Remove">✕</button>`;
+  list.appendChild(card);
+  updateEntryCounts();
+  card.querySelector('textarea').focus();
+}
+
+function removeFeedbackEntry(id){
+  const card=document.getElementById(id);
+  if(card){card.style.opacity='0';card.style.transform='translateX(30px)';card.style.transition='all .2s';setTimeout(()=>{card.remove();renumberEntries();updateEntryCounts();},200);}
+}
+
+function renumberEntries(){
+  const list=document.getElementById('entriesList');
+  if(!list) return;
+  Array.from(list.children).forEach((card,i)=>{
+    const numEl=card.querySelector('.entry-number');
+    const lblEl=card.querySelector('.entry-label');
+    if(numEl) numEl.textContent=`#${i+1}`;
+    if(lblEl) lblEl.textContent=`Feedback entry ${i+1}`;
+  });
+}
+
+function updateEntryCounts(){
+  const list=document.getElementById('entriesList');
+  if(!list) return;
+  const filled=Array.from(list.querySelectorAll('.entry-ta')).filter(ta=>ta.value.trim().length>3).length;
+  const total=list.children.length;
+  const countEl=document.getElementById('multiCount');
+  if(countEl) countEl.textContent=`${filled} / ${total} entries filled`;
+  const badge=document.getElementById('entryCountBadge');
+  if(badge) badge.textContent=filled;
+}
+
+function clearAllEntries(){
+  const list=document.getElementById('entriesList');
+  if(list) list.innerHTML='';
+  entryIdCounter=0;
+  updateEntryCounts();
+  addFeedbackEntry();addFeedbackEntry();addFeedbackEntry();
+}
+
+function getMultiEntryText(){
+  const list=document.getElementById('entriesList');
+  if(!list) return '';
+  return Array.from(list.querySelectorAll('.entry-ta'))
+    .map(ta=>ta.value.trim()).filter(v=>v.length>3).join('\n');
+}
+
+// Show per-entry result pills after analysis
+function showEntryResults(){
+  const list=document.getElementById('entriesList');
+  if(!list||!analysisData) return;
+  const entries=Array.from(list.querySelectorAll('.entry-ta'));
+  entries.forEach((ta,i)=>{
+    const text=ta.value.trim();
+    if(!text) return;
+    const match=analysisData.reviews.find(r=>r.text.startsWith(text.slice(0,40)));
+    const card=ta.closest('.entry-card');
+    const pill=card?card.querySelector('[id$="-result"]'):null;
+    if(pill&&match){
+      pill.textContent=`${match.emoji} ${match.label} · ${(match.score*100).toFixed(0)}%`;
+      pill.className=`entry-result-pill ${match.label==='positive'?'pos':match.label==='negative'?'neg':'neu'}`;
+      pill.style.display='';
+    }
+  });
+}
 
 // ─── ROUTING: PUBLIC PAGES ───
 function showPage(p){
@@ -208,20 +320,33 @@ function runDemoMode(){
 
 // ─── ANALYSIS ENTRY ───
 function startAnalysis(){
-  const ta=document.getElementById('feedbackInput');
-  const raw=ta?ta.value.trim():'';
-  if(!raw||raw.length<15){
-    if(ta){
-      ta.style.borderColor='#ef4444';
-      ta.style.boxShadow='0 0 0 3px rgba(239,68,68,.25)';
-      setTimeout(()=>{ta.style.borderColor='';ta.style.boxShadow='';},2000);
+  // Collect text from the active input mode
+  let feedbackText='';
+  if(uploadMode==='multi'){
+    feedbackText=getMultiEntryText();
+    if(!feedbackText||feedbackText.length<10){
+      // Shake the add-entry button
+      const btn=document.querySelector('.add-entry-btn');
+      if(btn){btn.style.boxShadow='0 0 0 3px rgba(239,68,68,.4)';setTimeout(()=>btn.style.boxShadow='',2000);}
+      alert('Please fill in at least one feedback entry before analyzing.');
+      return;
     }
-    return;
+  } else {
+    const ta=document.getElementById('feedbackInput');
+    feedbackText=ta?ta.value.trim():'';
+    if(!feedbackText||feedbackText.length<15){
+      if(ta){
+        ta.style.borderColor='#ef4444';
+        ta.style.boxShadow='0 0 0 3px rgba(239,68,68,.25)';
+        setTimeout(()=>{ta.style.borderColor='';ta.style.boxShadow='';},2000);
+      }
+      return;
+    }
   }
-  const feedbackText=raw;
   const opts={
     maxThemes:parseInt(document.getElementById('maxThemes')?.value||5),
     maxPriorities:parseInt(document.getElementById('maxPriorities')?.value||5),
+    isMultiMode: uploadMode==='multi',
   };
   const overlay=document.getElementById('loadingOverlay');
   if(overlay) overlay.classList.add('show');
@@ -249,6 +374,8 @@ function startAnalysis(){
           const el=document.getElementById(id);
           if(el) el.classList.remove('active','done');
         });
+        // If multi-mode, update per-entry result pills
+        if(uploadMode==='multi') showEntryResults();
         showDashboard();
       },200);
     }

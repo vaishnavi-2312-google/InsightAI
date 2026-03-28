@@ -48,9 +48,7 @@
       </div>
       <div class="tb-right">
         <div class="analysis-pill"><span class="ap-dot"></span><span id="apText">— reviews</span></div>
-        <div class="alert-bell" id="alertBell" onclick="showShell('dashboard')" title="Smart Alerts" style="display:none">
-          🔔 <span class="alert-count" id="alertCount">0</span>
-        </div>
+
         <button class="tb-btn ghost" onclick="exportCSV()">⬇ CSV</button>
         <button class="tb-btn ghost" onclick="exportJSON()">⬇ JSON</button>
         <button class="tb-btn primary" onclick="downloadPDF()">⬇ PDF Report</button>
@@ -318,8 +316,15 @@
     <div class="pub-hdr">
       <div class="sec-lbl">Step 1 of 1</div>
       <h1 class="pub-ttl">Upload Your Feedback</h1>
-      <p class="pub-sub">Paste text, drag a file (.txt, .csv, .json), or use demo data.</p>
+      <p class="pub-sub">Paste text · Upload a file · Or add multiple entries one by one.</p>
     </div>
+
+    <!-- Mode Tabs -->
+    <div class="upload-tabs">
+      <button class="upload-tab active" id="tab-paste" onclick="switchUploadMode('paste',this)">📋 Paste / File Upload</button>
+      <button class="upload-tab" id="tab-multi" onclick="switchUploadMode('multi',this)">➕ Multiple Entries <span class="entry-count-badge" id="entryCountBadge">0</span></button>
+    </div>
+
     <div class="upload-wrap">
       <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
         <div class="dz-ico">📂</div>
@@ -346,6 +351,19 @@
         </div>
       </div>
 
+      <!-- ── MULTI-ENTRY MODE ── -->
+      <div id="multiEntryMode" style="display:none">
+        <div class="multi-header">
+          <div class="multi-info">
+            <span class="multi-count" id="multiCount">0 entries</span>
+            <span class="multi-hint">Each entry is analyzed individually and combined into one report</span>
+          </div>
+          <button class="tb-btn ghost" onclick="clearAllEntries()">✕ Clear All</button>
+        </div>
+        <div id="entriesList" class="entries-list"></div>
+        <button class="add-entry-btn" onclick="addFeedbackEntry()">+ Add Another Feedback Entry</button>
+      </div>
+
       <div class="upload-opts">
         <div class="opt-group">
           <label class="opt-label">Analysis depth:</label>
@@ -361,7 +379,7 @@
       <div class="upload-tips">
         <span>🔒 100% local — your data never leaves the browser</span>
         <span>⚡ Results in under 3 seconds</span>
-        <span>📁 CSV: one review per row, first column used</span>
+        <span>➕ Multi-entry: each input is analyzed individually</span>
       </div>
     </div>
 
